@@ -74,12 +74,22 @@
 
   // 认证走 Edge Function（它再转发旧服务器），业务数据走 Supabase
   var FUNC = (CFG.authProxy || (BASE + '/functions/v1/auth-proxy'));
+  var LKEY = 'hbmu_legacy_token';
+  function legacyToken() { try { return localStorage.getItem(LKEY) || ''; } catch (e) { return ''; } }
+  function setLegacyToken(t) {
+    try { t ? localStorage.setItem(LKEY, t) : localStorage.removeItem(LKEY); } catch (e) {}
+  }
   async function authProxy(action, payload) {
     var s = session();
     var bearer = (s && s.access_token) || KEY;
     var r = await fetch(FUNC, {
       method: 'POST',
-      headers: { apikey: KEY, authorization: 'Bearer ' + bearer, 'content-type': 'application/json' },
+      headers: {
+        apikey: KEY,
+        authorization: 'Bearer ' + bearer,
+        'content-type': 'application/json',
+        'x-legacy-token': legacyToken(),
+      },
       body: JSON.stringify(Object.assign({ action: action }, payload || {})),
     });
     var text = await r.text();
@@ -285,12 +295,24 @@
     if (pathname === '/api/register' && method === 'POST') {
       var jr = await authProxy('register', { studentId: body.studentId, password: body.password });
       if (jr.session) setSession(jr.session);
+      if (jr.legacyToken) setLegacyToken(jr.legacyToken);
       return { ok: true, nickname: jr.nickname || '冀医用户', userId: jr.userId, token: jr.session && jr.session.access_token };
     }
     if (pathname === '/api/login' && method === 'POST') {
       var jl = await authProxy('login', { studentId: body.studentId, password: body.password });
       if (jl.session) setSession(jl.session);
+      if (jl.legacyToken) setLegacyToken(jl.legacyToken);
       return { ok: true, nickname: jl.nickname || '冀医用户', userId: jl.userId, token: jl.session && jl.session.access_token };
+    }
+    if (pathname === '/api/password' && method === 'POST') {
+      // 密码由云服务器管理
+      await authProxy('password', { currentPassword: body.currentPassword, newPassword: body.newPassword });
+      return { ok: true };
+    }
+    if (pathname === '/api/profile' && method === 'POST') {
+      // 昵称也存云服务器，Supabase 只同步一份给评论显示
+      var pr = await authProxy('profile', { nickname: body.nickname });
+      return { ok: true, nickname: pr.nickname || body.nickname };
     }
     if (pathname === '/api/logout' && method === 'POST') {
       clearSession();
