@@ -54,10 +54,10 @@
       CUSTOM.forEach(function (c) {
         all.push({ id: c.id, name: c.name, n: (c.questions || []).length, custom: true });
       });
-      if (!k) return all.slice(0, 40);   // 没输入时也列出来，方便直接点
+      if (!k) return all;   // 点开就列出全部，可以直接选
       return all.filter(function (c) {
         return String(c.name).toLowerCase().indexOf(k) >= 0 || String(c.id).indexOf(k) >= 0;
-      }).slice(0, 40);
+      });
     }
 
     function render(kw, force) {
@@ -75,6 +75,13 @@
         listEl.innerHTML = '<div class="rail-course-empty">没有匹配的题库</div>';
         return;
       }
+      // 顶部一行：可选、也可搜
+      var head = document.createElement('div');
+      head.className = 'rail-course-hd';
+      head.textContent = k
+        ? '搜到 ' + list.length + ' 个'
+        : '共 ' + list.length + ' 个 · 输入可搜';
+      listEl.appendChild(head);
       list.forEach(function (c) {
         var b = document.createElement('button');
         b.type = 'button';

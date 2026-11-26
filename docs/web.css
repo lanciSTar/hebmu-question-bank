@@ -36,3 +36,8 @@
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .rail-course-cur[hidden]{display:none}
+
+.rail-course-hd{
+  padding:6px 10px 8px;font-size:11px;color:var(--ink-3);letter-spacing:.04em;
+  position:sticky;top:0;background:var(--paper);
+}
