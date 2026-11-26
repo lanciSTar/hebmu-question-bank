@@ -43,7 +43,9 @@
       CUR = name;
       curEl.textContent = '当前：' + name + '（' + n + ' 题）';
     }
-    setCur(course.name, (course.questions || []).length);
+    // 用 app.js 实际选中的题库（它可能按上次进度换了库），不要用 URL 里的
+    var active = (window.Drills && window.Drills.course) ? window.Drills.course : course;
+    setCur(active.name, (active.questions || []).length);
 
     function items(kw) {
       var k = String(kw || '').trim().toLowerCase();
@@ -103,8 +105,8 @@
     });
 
     // 记下当前题库 id 供高亮
-    window.__CUR_COURSE_ID__ = String(course.id);
-    CUR_ID = String(course.id);
+    window.__CUR_COURSE_ID__ = String(active.id);
+    CUR_ID = String(active.id);
   }
 
   var CUR_ID = '';
