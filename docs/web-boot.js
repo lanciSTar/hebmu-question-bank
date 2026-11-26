@@ -1,11 +1,14 @@
-// 网页版启动器：读 data/index.json + 本机自建题库，交给 app.js 渲染
+// 网页版启动器：读 data/index.json + 本机自建题库；题库搜索并进「搜索题库」输入框
 (function () {
   var box = document.getElementById('drillBoot');
   var txt = document.getElementById('drillBootText');
   var sub = document.getElementById('drillBootSub');
-  var sel = document.getElementById('webCourse');
   var params = new URLSearchParams(location.search);
   var cid = params.get('c');
+
+  var IDX = [];
+  var CUSTOM = [];
+  var CUR = '';
 
   function fail(msg) {
     if (!box) return;
@@ -14,7 +17,6 @@
       '<div class="boot-hint">确认 data/ 目录存在，并且是用 http(s) 打开的（file:// 会被浏览器拦 fetch）。</div>';
   }
 
-  // 本机自建题库（在题库缓存里导入的）
   function customBanks() {
     try {
       var raw = localStorage.getItem('hbmu_custom_banks');
@@ -23,37 +25,102 @@
     } catch (e) { return []; }
   }
 
-  function fillSelect(indexList, customList, currentId) {
-    if (!sel) return;
-    sel.innerHTML = '';
-    indexList.forEach(function (c) {
-      var o = document.createElement('option');
-      o.value = c.id;
-      o.textContent = c.name + '（' + c.count + ' 题）';
-      sel.appendChild(o);
+  // 在「搜索题库 / 章节」输入框下面挂：当前题库 + 候选列表
+  function mountPicker(course) {
+    var search = document.getElementById('railSearch');
+    if (!search || !search.parentNode) return;
+    var holder = document.createElement('div');
+    holder.id = 'webCourseBox';
+    holder.innerHTML =
+      '<div class="rail-course-cur" id="webCourseCur"></div>' +
+      '<div class="rail-course-list" id="webCourseList" hidden></div>';
+    search.parentNode.insertAdjacentElement('afterend', holder);
+
+    var curEl = holder.querySelector('#webCourseCur');
+    var listEl = holder.querySelector('#webCourseList');
+
+    function setCur(name, n) {
+      CUR = name;
+      curEl.textContent = '当前：' + name + '（' + n + ' 题）';
+    }
+    setCur(course.name, (course.questions || []).length);
+
+    function items(kw) {
+      var k = String(kw || '').trim().toLowerCase();
+      var all = [];
+      IDX.forEach(function (c) { all.push({ id: c.id, name: c.name, n: c.count, custom: false }); });
+      CUSTOM.forEach(function (c) {
+        all.push({ id: c.id, name: c.name, n: (c.questions || []).length, custom: true });
+      });
+      if (!k) return [];
+      return all.filter(function (c) {
+        return String(c.name).toLowerCase().indexOf(k) >= 0 || String(c.id).indexOf(k) >= 0;
+      }).slice(0, 30);
+    }
+
+    function render(kw) {
+      var list = items(kw);
+      if (!String(kw || '').trim()) {
+        listEl.hidden = true;
+        curEl.hidden = false;
+        return;
+      }
+      curEl.hidden = true;
+      listEl.hidden = false;
+      listEl.innerHTML = '';
+      if (!list.length) {
+        listEl.innerHTML = '<div class="rail-course-empty">没有匹配的题库</div>';
+        return;
+      }
+      list.forEach(function (c) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'rail-course-item';
+        b.innerHTML = '<span class="nm"></span><span class="nn"></span>';
+        b.querySelector('.nm').textContent = c.name + (c.custom ? '（自建）' : '');
+        b.querySelector('.nn').textContent = c.n + ' 题';
+        if (String(c.id) === String(CUR_ID)) b.setAttribute('aria-current', 'true');
+        b.addEventListener('click', function () {
+          search.value = '';
+          listEl.hidden = true;
+          curEl.hidden = false;
+          if (c.custom && window.Drills && window.Drills.selectCourse) {
+            window.Drills.selectCourse(c.id);
+            setCur(c.name, c.n);
+            history.replaceState(null, '', '?c=' + encodeURIComponent(c.id));
+          } else {
+            location.href = '?c=' + encodeURIComponent(c.id);
+          }
+        });
+        listEl.appendChild(b);
+      });
+    }
+
+    search.addEventListener('input', function () { render(search.value); });
+    search.addEventListener('focus', function () { if (search.value.trim()) render(search.value); });
+    search.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { search.value = ''; render(''); }
     });
-    customList.forEach(function (c) {
-      var o = document.createElement('option');
-      o.value = c.id;
-      o.textContent = c.name + '（自建 · ' + (c.questions || []).length + ' 题）';
-      sel.appendChild(o);
-    });
-    var want = currentId || (indexList[0] || {}).id;
-    if (want) sel.value = want;
+
+    // 记下当前题库 id 供高亮
+    window.__CUR_COURSE_ID__ = String(course.id);
+    CUR_ID = String(course.id);
   }
+
+  var CUR_ID = '';
 
   (async function () {
     try {
       var res = await fetch('data/index.json', { cache: 'no-store' });
       if (!res.ok) throw new Error('找不到 data/index.json（HTTP ' + res.status + '）');
-      var idx = await res.json();
-      var customs = customBanks();
+      IDX = await res.json();
+      CUSTOM = customBanks();
 
-      if (!cid) cid = (idx[0] || {}).id;
-      if (!cid && !customs.length) throw new Error('题库清单是空的');
+      if (!cid) cid = (IDX[0] || {}).id;
+      if (!cid && !CUSTOM.length) throw new Error('题库清单是空的');
 
-      var custom = customs.find(function (c) { return String(c.id) === String(cid); });
-      var meta = idx.find(function (c) { return String(c.id) === String(cid); });
+      var custom = CUSTOM.find(function (c) { return String(c.id) === String(cid); });
+      var meta = IDX.find(function (c) { return String(c.id) === String(cid); });
 
       if (txt) txt.textContent = '正在加载 ' + (custom ? custom.name : (meta ? meta.name : cid));
       if (sub && meta) sub.textContent = '题库约 ' + Math.max(1, Math.round(meta.size / 1024)) + ' KB';
@@ -69,7 +136,6 @@
 
       window.__SERVER__ = '';
 
-      // 登录状态下，如果本地没进度，把云端进度拉下来
       if (typeof window.__pullCloudProgress === 'function') {
         try {
           var cloud = await window.__pullCloudProgress();
@@ -82,11 +148,10 @@
         } catch (e) {}
       }
 
-      // 当前题库 + 其他自建题库一起交给 app.js（这样「新增题目」能加到自建库里）
-      var others = customs.filter(function (c) { return String(c.id) !== String(course.id); });
+      var others = CUSTOM.filter(function (c) { return String(c.id) !== String(course.id); });
       window.__startDrill({ version: 2, courses: [course].concat(others) });
 
-      fillSelect(idx, customs, course.id);
+      mountPicker(course);
       if (box) box.remove();
       document.body.dataset.booted = '1';
       document.title = course.name + ' · 河北医科大学题库刷题';
@@ -94,17 +159,4 @@
       fail((e && e.message) || String(e));
     }
   })();
-
-  if (sel) {
-    sel.addEventListener('change', function () {
-      var v = sel.value;
-      if (/^custom-/.test(v) && window.Drills && window.Drills.selectCourse) {
-        // 自建题库存本机，直接切换，不用重新加载页面
-        window.Drills.selectCourse(v);
-        history.replaceState(null, '', '?c=' + encodeURIComponent(v));
-      } else {
-        location.href = '?c=' + encodeURIComponent(v);
-      }
-    });
-  }
 })();
