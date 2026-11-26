@@ -43,6 +43,23 @@
 
   var rest = function (path, opts) { return call('/rest/v1/' + path, opts); };
 
+  // 认证走 Edge Function（它再转发旧服务器），业务数据走 Supabase
+  var FUNC = (CFG.authProxy || (BASE + '/functions/v1/auth-proxy'));
+  async function authProxy(action, payload) {
+    var s = session();
+    var bearer = (s && s.access_token) || KEY;
+    var r = await fetch(FUNC, {
+      method: 'POST',
+      headers: { apikey: KEY, authorization: 'Bearer ' + bearer, 'content-type': 'application/json' },
+      body: JSON.stringify(Object.assign({ action: action }, payload || {})),
+    });
+    var text = await r.text();
+    var j = null;
+    try { j = text ? JSON.parse(text) : null; } catch (e) { j = null; }
+    if (!r.ok) throw Object.assign(new Error((j && j.error) || '认证失败'), { status: r.status, body: j });
+    return j || {};
+  }
+
   // 学号当成邮箱（Supabase 认证要邮箱格式）
   function toEmail(sid) {
     var s = String(sid || '').trim();
@@ -237,21 +254,29 @@
     var m;
 
     if (pathname === '/api/register' && method === 'POST') {
-      var s1 = await signUp(body.studentId, body.password);
-      var u1 = await currentUser();
-      return { ok: true, nickname: u1 ? u1.nickname : '冀医用户', token: s1.access_token };
+      var jr = await authProxy('register', { studentId: body.studentId, password: body.password });
+      if (jr.session) setSession(jr.session);
+      return { ok: true, nickname: jr.nickname || '冀医用户', userId: jr.userId, token: jr.session && jr.session.access_token };
     }
     if (pathname === '/api/login' && method === 'POST') {
-      var s2 = await signIn(body.studentId, body.password);
-      var u2 = await currentUser();
-      return { ok: true, nickname: u2 ? u2.nickname : '冀医用户', token: s2.access_token };
+      var jl = await authProxy('login', { studentId: body.studentId, password: body.password });
+      if (jl.session) setSession(jl.session);
+      return { ok: true, nickname: jl.nickname || '冀医用户', userId: jl.userId, token: jl.session && jl.session.access_token };
     }
     if (pathname === '/api/logout' && method === 'POST') {
-      await signOut();
+      clearSession();
       return { ok: true };
     }
     if (pathname === '/api/me' && method === 'GET') {
-      return { user: await currentUser() };
+      if (!token()) return { user: null };
+      try {
+        var mu = await call('/auth/v1/user');
+        var mp = await rest('profiles?id=eq.' + mu.id + '&select=nickname');
+        return { user: { id: mu.id, nickname: (mp && mp[0] && mp[0].nickname) || '冀医用户' } };
+      } catch (e) {
+        clearSession();
+        return { user: null };
+      }
     }
     if (pathname === '/api/comments' && method === 'GET') {
       return await listComments(qs.get('course'), qs.get('qid'), Number(qs.get('limit') || 0), qs.get('sort'));
@@ -278,20 +303,11 @@
       return { ok: true, unsupported: true };
     }
     if (pathname === '/api/forgot' && method === 'POST') {
-      var fr = await call('/rest/v1/rpc/request_password_reset', {
-        method: 'POST',
-        body: JSON.stringify({ p_student_no: body.studentId }),
-      });
-      if (fr && fr.ok === false) throw new Error(fr.error || '申请失败');
-      return { ok: true };
+      // 账号现在由旧服务器管，Supabase 这边改密码没用
+      throw Object.assign(new Error('忘记密码请联系管理员（QQ 群 1047914312）重置'), { status: 400 });
     }
     if (pathname === '/api/reset' && method === 'POST') {
-      var rr = await call('/rest/v1/rpc/apply_password_reset', {
-        method: 'POST',
-        body: JSON.stringify({ p_student_no: body.studentId, p_code: body.code, p_new_password: body.password }),
-      });
-      if (rr && rr.ok === false) throw new Error(rr.error || '重置失败');
-      return { ok: true };
+      throw Object.assign(new Error('忘记密码请联系管理员（QQ 群 1047914312）重置'), { status: 400 });
     }
     if (pathname === '/api/reports' && method === 'POST') {
       return { ok: true };
