@@ -2140,7 +2140,12 @@ window.__startDrill = function (ARG_BANK) {
     bankMsg('导入成功：' + course.name + ' · ' + course.questions.length + ' 题' +
             (dup.length ? ' · 检测到 ' + dup.length + ' 组重复（多出 ' + dupN + ' 题）' : ''), 'ok');
     ta.value = '';
-    setTimeout(() => { closeBankModal(); renderChrome(); }, 700);
+    setTimeout(() => {
+      closeBankModal();
+      renderChrome();
+      // 网页版的题库下拉是启动时生成的，导入新题库后刷新一次才能选到
+      if(window.__WEB_MODE__ && document.getElementById('webCourse')) location.reload();
+    }, 700);
   }
 
   // 提交到讨论服务器，等管理员审核
