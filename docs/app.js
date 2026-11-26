@@ -3634,10 +3634,45 @@ window.__startDrill = function (ARG_BANK) {
     }
   }
 
+  // 登录验证码：服务端生成图片，服务端校验（扩展环境没有这个接口时自动跳过）
+  let capId = '';
+  async function loadCaptcha(){
+    const img = $('authCapImg');
+    if(!img) return;
+    try{
+      const r = await api('/api/captcha');
+      if(!r || !r.svg){ img.hidden = true; capId = ''; return; }
+      capId = r.id;
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(r.svg);
+      img.hidden = false;
+      if($('authCap')) $('authCap').value = '';
+    }catch(e){
+      img.hidden = true;
+      capId = '';
+    }
+  }
+  async function checkCaptcha(){
+    if(!capId) return true;   // 没有验证码服务就直接放行（老环境）
+    const code = ($('authCap').value || '').trim();
+    if(!code){ $('authMsg').textContent = '先输入验证码'; return false; }
+    try{
+      const r = await api('/api/captcha/check', { method: 'POST', body: JSON.stringify({ id: capId, code }) });
+      if(r && r.ok) return true;
+      $('authMsg').textContent = '验证码不对，换一张再试';
+      await loadCaptcha();
+      return false;
+    }catch(e){
+      $('authMsg').textContent = '验证码校验失败：' + (e.message || '网络问题');
+      await loadCaptcha();
+      return false;
+    }
+  }
+
   function openAuth(){
     $('auth').dataset.open = 'true';
     $('authMsg').textContent = '';
     $('authReset').hidden = true;
+    loadCaptcha();
     setTimeout(() => $('authSid').focus(), 60);
   }
   function closeAuth(){ $('auth').dataset.open = 'false'; }
@@ -3732,6 +3767,8 @@ window.__startDrill = function (ARG_BANK) {
     if(!sid){ $('authMsg').textContent = '先填学号'; return; }
     if(!/^[0-9A-Za-z@._-]{4,40}$/.test(sid)){ $('authMsg').textContent = '学号格式不对（4–40 位数字或字母）'; return; }
     if(!pass || pass.length < 8){ $('authMsg').textContent = '密码至少 8 位'; return; }
+    // 图形验证码（服务端校验，一次性）
+    if(!(await checkCaptcha())) return;
 
     const oldText = btn ? btn.textContent : '';
     if(btn){ btn.disabled = true; btn.textContent = kind === 'register' ? '注册中…' : '登录中…'; }
@@ -3938,6 +3975,8 @@ window.__startDrill = function (ARG_BANK) {
       if(e.key === 'Enter'){ e.preventDefault(); doAuth('login'); }
     });
     $('authPass').addEventListener('input', () => { $('authMsg').textContent = ''; });
+    // 点验证码图片换一张
+    if($('authCapImg')) $('authCapImg').addEventListener('click', loadCaptcha);
 
     // 忘记密码：在同一个弹窗里切换
     $('authForgot').addEventListener('click', () => {

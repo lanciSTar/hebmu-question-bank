@@ -302,6 +302,16 @@
     if (pathname === '/api/mistake' && method === 'POST') {
       return { ok: true, unsupported: true };
     }
+    if (pathname === '/api/captcha' && method === 'GET') {
+      return await call('/rest/v1/rpc/create_captcha', { method: 'POST', body: '{}' });
+    }
+    if (pathname === '/api/captcha/check' && method === 'POST') {
+      var okCap = await call('/rest/v1/rpc/check_captcha', {
+        method: 'POST',
+        body: JSON.stringify({ p_id: body.id, p_code: body.code }),
+      });
+      return { ok: !!okCap };
+    }
     if (pathname === '/api/forgot' && method === 'POST') {
       // 账号现在由旧服务器管，Supabase 这边改密码没用
       throw Object.assign(new Error('忘记密码请联系管理员（QQ 群 1047914312）重置'), { status: 400 });

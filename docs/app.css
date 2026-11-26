@@ -1172,3 +1172,12 @@ body[data-view="practice"] #dustBg{opacity:.9}
 .auth-reset{margin-top:4px}
 .auth-msg[data-kind="ok"]{color:var(--ok)}
 .auth-msg[data-kind="err"]{color:var(--bad)}
+
+/* 登录验证码（沿用 auth-field 的风格） */
+.auth-cap{display:flex;align-items:center;gap:8px}
+.auth-cap input{flex:1;min-width:0}
+.auth-cap img{
+  flex:none;width:136px;height:42px;border-radius:9px;
+  border:1px solid var(--line-2);background:var(--paper-2);cursor:pointer;
+}
+.auth-cap img[hidden]{display:none}

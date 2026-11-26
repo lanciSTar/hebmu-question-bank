@@ -97,6 +97,12 @@
     <p class="auth-sub">用学号注册，昵称自动生成，之后可以改。</p>
     <label class="auth-field"><span>学号</span><input id="authSid" inputmode="numeric" autocomplete="username" placeholder="2401xxxxxxxx"></label>
     <label class="auth-field"><span>密码</span><input id="authPass" type="password" autocomplete="current-password" placeholder="至少 8 位"></label>
+    <label class="auth-field"><span>验证码</span>
+      <span class="auth-cap">
+        <input id="authCap" autocomplete="off" inputmode="text" placeholder="输入右边的字符">
+        <img id="authCapImg" alt="验证码" title="点一下换一张" hidden>
+      </span>
+    </label>
     <p class="auth-msg" id="authMsg"></p>
     <div class="auth-acts">
       <button class="btn btn-primary" id="authLogin">登录</button>
