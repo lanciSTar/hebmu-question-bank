@@ -1,19 +1,23 @@
-/* 网页版：左侧栏里的题库选择 */
+/* 网页版：左侧栏顶部的题库选择（与 rail 里其他控件同一套样式） */
 .rail-pick{
-  display:flex;flex-direction:column;gap:6px;
-  padding:10px 12px 12px;border-bottom:1px dashed var(--line);
+  display:flex;flex-direction:column;gap:8px;
+  padding:14px 8px 12px;border-bottom:1px solid var(--line);
 }
 .rail-pick-label{
-  font-size:11px;color:var(--ink-3);letter-spacing:.06em;
+  font-size:12px;color:var(--ink-3);letter-spacing:.06em;padding:0 2px;
 }
 .rail-pick select{
-  width:100%;height:32px;box-sizing:border-box;
-  border:1px solid var(--line-2);border-radius:8px;
-  background:#fff;color:var(--ink);font:inherit;font-size:12.5px;
-  padding:0 8px;outline:none;cursor:pointer;
+  width:100%;height:34px;box-sizing:border-box;
+  padding:0 10px;border-radius:8px;
+  border:1px solid var(--line-2);background:var(--paper);color:var(--ink);
+  font:inherit;font-size:12.5px;outline:none;cursor:pointer;
 }
 .rail-pick select:focus{border-color:var(--accent)}
 .rail-pick-link{
-  font-size:11.5px;color:var(--accent);text-decoration:none;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  width:100%;box-sizing:border-box;margin-top:2px;
+  padding:8px 10px;border:1px dashed rgba(42,90,76,.35);border-radius:8px;
+  background:rgba(42,90,76,.04);color:var(--accent,#2A5A4C);
+  font-size:12.5px;text-decoration:none;
 }
-.rail-pick-link:hover{text-decoration:underline}
+.rail-pick-link:hover{background:rgba(42,90,76,.09)}
