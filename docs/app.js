@@ -3636,10 +3636,16 @@ window.__startDrill = function (ARG_BANK) {
   }
 
   // 登录验证码：服务端生成图片，服务端校验（扩展环境没有这个接口时自动跳过）
+  // 用 config.js 里的 captcha 开关控制，测试阶段默认关
+  function captchaOn(){
+    return !!(window.__SUPABASE__ && window.__SUPABASE__.captcha === true);
+  }
   let capId = '';
   async function loadCaptcha(){
     const img = $('authCapImg');
     if(!img) return;
+    if(!captchaOn()){ img.hidden = true; capId = ''; if($('authCapField')) $('authCapField').hidden = true; return; }
+    if($('authCapField')) $('authCapField').hidden = false;
     try{
       const r = await api('/api/captcha');
       if(!r || !r.svg){ img.hidden = true; capId = ''; return; }
@@ -3653,6 +3659,7 @@ window.__startDrill = function (ARG_BANK) {
     }
   }
   async function checkCaptcha(){
+    if(!captchaOn()) return true;
     if(!capId) return true;   // 没有验证码服务就直接放行（老环境）
     const code = ($('authCap').value || '').trim();
     if(!code){ $('authMsg').textContent = '先输入验证码'; return false; }
@@ -3768,8 +3775,8 @@ window.__startDrill = function (ARG_BANK) {
     if(!sid){ $('authMsg').textContent = '先填学号'; return; }
     if(!/^[0-9A-Za-z@._-]{4,40}$/.test(sid)){ $('authMsg').textContent = '学号格式不对（4–40 位数字或字母）'; return; }
     if(!pass || pass.length < 8){ $('authMsg').textContent = '密码至少 8 位'; return; }
-    // 图形验证码（服务端校验，一次性）
-    if(!(await checkCaptcha())) return;
+    // 图形验证码（服务端校验，一次性；config.js 里 captcha:true 才启用）
+    if(captchaOn() && !(await checkCaptcha())) return;
 
     const oldText = btn ? btn.textContent : '';
     if(btn){ btn.disabled = true; btn.textContent = kind === 'register' ? '注册中…' : '登录中…'; }
