@@ -1637,6 +1637,26 @@ window.__startDrill = function (ARG_BANK) {
   });
 
   // ---------- 题库缓存管理 ----------
+  // 把自建题库提交到服务器审核（审核通过后服务器推到 GitHub）
+  async function uploadCustomBank(course){
+    if(!window.__SERVER__) throw new Error('网页版不能上传，请用插件');
+    if(!ME) throw new Error('先登录再上传');
+    const bank = {
+      format: 'hebmu-bank-v1',
+      name: course.name,
+      questions: (course.questions || []).map(q => ({
+        stem: q.q || '',
+        options: (q.o || []).slice(),
+        answer: q.a || '',
+        chapter: q.ch || '',
+        type: q.t || '',
+        explanation: q.ex || '',
+      })).filter(x => x.stem),
+    };
+    if(!bank.questions.length) throw new Error('这个题库里没有题目');
+    return await api('/api/banks', { method: 'POST', body: JSON.stringify({ bank }) });
+  }
+
   async function renderCacheList(){
     const box = document.getElementById('cacheList');
     if(!box) return;
@@ -1664,6 +1684,7 @@ window.__startDrill = function (ARG_BANK) {
       const row = document.createElement('div');
       row.className = 'cache-row';
       row.innerHTML = '<span class="nm"></span><span class="meta"></span>' +
+        (opts.custom && window.__SERVER__ ? '<button class="upload">上传</button>' : '') +
         '<button class="load">加载</button><button class="del">删除</button>';
       row.querySelector('.nm').textContent = opts.name;
       row.querySelector('.meta').textContent = opts.meta;
@@ -1692,6 +1713,32 @@ window.__startDrill = function (ARG_BANK) {
             loadBtn.classList.add('is-loaded');
           }catch(err){
             loadBtn.textContent = '加载失败';
+          }
+        });
+      }
+
+      const upBtn = row.querySelector('.upload');
+      if(upBtn){
+        upBtn.addEventListener('click', async () => {
+          if(upBtn.dataset.armed !== '1'){
+            upBtn.dataset.armed = '1';
+            upBtn.textContent = '确认上传?';
+            setTimeout(() => {
+              if(upBtn.dataset.armed === '1'){ upBtn.dataset.armed = ''; upBtn.textContent = '上传'; }
+            }, 3500);
+            return;
+          }
+          upBtn.dataset.armed = '';
+          upBtn.textContent = '上传中…';
+          upBtn.disabled = true;
+          try{
+            const r = await uploadCustomBank(opts.data);
+            upBtn.textContent = '已提交';
+            toast('已提交审核（编号 ' + r.id + '），通过后会自动进题库');
+          }catch(err){
+            upBtn.textContent = '上传';
+            upBtn.disabled = false;
+            toast(err.message || '上传失败');
           }
         });
       }
