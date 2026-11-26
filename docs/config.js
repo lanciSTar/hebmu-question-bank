@@ -1,6 +1,5 @@
-// Supabase 配置（匿名公钥，可以公开；不填就退化成纯本地模式）
-// 用法：把下面两个值填上，重新生成 index.html 即可
+// Supabase 配置（anon key 是公开的，放前端没问题；安全靠 RLS）
 window.__SUPABASE__ = {
-  url: '',        // 形如 https://xxxx.supabase.co
-  anonKey: '',    // Project Settings → API → anon public
+  url: 'https://tvkxvtchylkaddjudgrx.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2a3h2dGNoeWxrYWRkanVkZ3J4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2OTE4OTgsImV4cCI6MjExMTI2Nzg5OH0.fCA4hIZpWLuTVWmMmeyMgHQRdH6GP_qzW5ZP19gDewk',
 };
