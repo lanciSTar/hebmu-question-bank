@@ -3857,6 +3857,8 @@ window.__startDrill = function (ARG_BANK) {
     if(!ME) return openAuth();
     $('accNick').value = ME.nickname || '';
     renderVerifyState();
+    // 网页版没有认证申请接口，直接隐藏这个按钮
+    if($('accApply')) $('accApply').hidden = (typeof window.__API_ADAPTER__ === 'function');
     $('accMsg').textContent = '';
     $('accSub').textContent = '当前昵称：' + (ME.nickname || '—');
     $('account').dataset.open = 'true'; renderAccStats();
