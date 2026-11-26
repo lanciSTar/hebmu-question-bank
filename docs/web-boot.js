@@ -155,6 +155,11 @@
 
       window.__SERVER__ = '';
 
+      // 有本地登录记录就主动续一次（access_token 1 小时过期，refresh_token 能用 7 天）
+      if (typeof window.__refreshSession === 'function') {
+        try { await window.__refreshSession(); } catch (e) {}
+      }
+
       if (typeof window.__pullCloudProgress === 'function') {
         try {
           var cloud = await window.__pullCloudProgress();

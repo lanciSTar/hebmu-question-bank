@@ -20,6 +20,23 @@
 
   function enc(v) { return encodeURIComponent(String(v == null ? '' : v)); }
 
+  // 用 refresh_token 换新的 access_token（Supabase 的 access_token 只有 1 小时）
+  async function refreshSession() {
+    var s = session();
+    if (!s || !s.refresh_token) return null;
+    try {
+      var r = await fetch(BASE + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { apikey: KEY, 'content-type': 'application/json' },
+        body: JSON.stringify({ refresh_token: s.refresh_token }),
+      });
+      if (!r.ok) return null;
+      var j = await r.json();
+      if (j && j.access_token) { setSession(j); return j; }
+    } catch (e) {}
+    return null;
+  }
+
   async function call(path, opts) {
     opts = opts || {};
     var headers = { apikey: KEY };
@@ -31,6 +48,18 @@
       headers: headers,
       body: opts.body,
     });
+    // token 过期：刷新一次再重试
+    if (res.status === 401 && !opts.retried && token()) {
+      var ns = await refreshSession();
+      if (ns) {
+        var retry = Object.assign({}, opts, { retried: true });
+        var headers2 = { apikey: KEY };
+        if (token()) headers2.authorization = 'Bearer ' + token();
+        if (retry.body) headers2['content-type'] = 'application/json';
+        if (retry.prefer) headers2.prefer = retry.prefer;
+        res = await fetch(BASE + path, { method: retry.method || 'GET', headers: headers2, body: retry.body });
+      }
+    }
     var text = await res.text();
     var data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
@@ -334,6 +363,7 @@
   // 进度变化时自动推送（app.js 的 save() 会调用）
   window.__onSaveProgress = schedulePush;
   window.__pullCloudProgress = pullProgress;
+  window.__refreshSession = refreshSession;
 
   // 导出 / 导入
   window.__exportProgress = function () {
