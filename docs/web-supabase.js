@@ -277,6 +277,22 @@
     if (pathname === '/api/mistake' && method === 'POST') {
       return { ok: true, unsupported: true };
     }
+    if (pathname === '/api/forgot' && method === 'POST') {
+      var fr = await call('/rest/v1/rpc/request_password_reset', {
+        method: 'POST',
+        body: JSON.stringify({ p_student_no: body.studentId }),
+      });
+      if (fr && fr.ok === false) throw new Error(fr.error || '申请失败');
+      return { ok: true };
+    }
+    if (pathname === '/api/reset' && method === 'POST') {
+      var rr = await call('/rest/v1/rpc/apply_password_reset', {
+        method: 'POST',
+        body: JSON.stringify({ p_student_no: body.studentId, p_code: body.code, p_new_password: body.password }),
+      });
+      if (rr && rr.ok === false) throw new Error(rr.error || '重置失败');
+      return { ok: true };
+    }
     if (pathname === '/api/reports' && method === 'POST') {
       return { ok: true };
     }

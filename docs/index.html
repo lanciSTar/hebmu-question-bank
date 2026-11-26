@@ -107,6 +107,20 @@
       <button class="btn btn-primary" id="authLogin">登录</button>
       <button class="btn btn-ghost" id="authRegister">注册新账号</button>
     </div>
+    <button type="button" class="auth-forgot" id="authForgot">忘记密码？</button>
+
+    <div class="auth-reset" id="authReset" hidden>
+      <p class="auth-sub" style="margin:4px 0 10px">输入学号申请验证码，找管理员要验证码后填进来重置。</p>
+      <label class="auth-field"><span>学号</span><input id="resetSid" inputmode="numeric" placeholder="注册时用的学号"></label>
+      <label class="auth-field"><span>验证码</span><input id="resetCode" inputmode="numeric" placeholder="6 位数字"></label>
+      <label class="auth-field"><span>新密码</span><input id="resetPass" type="password" autocomplete="new-password" placeholder="至少 8 位"></label>
+      <div class="auth-acts">
+        <button class="btn btn-ghost" id="resetRequest">申请验证码</button>
+        <button class="btn btn-primary" id="resetApply">重置密码</button>
+      </div>
+      <p class="auth-msg" id="resetMsg"></p>
+      <button type="button" class="auth-forgot" id="resetBack">← 回到登录</button>
+    </div>
   </div>
 </div>
 <header class="topbar">

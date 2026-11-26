@@ -1161,3 +1161,14 @@ body[data-view="practice"] #dustBg{opacity:.9}
   white-space:normal;text-align:center;
 }
 .app-toast[data-on="1"]{opacity:1;transform:translate(-50%,0)}
+
+/* 忘记密码 */
+.auth-forgot{
+  display:block;margin:12px auto 0;padding:4px 8px;border:0;background:transparent;
+  color:var(--ink-3);font:inherit;font-size:12px;cursor:pointer;text-decoration:underline;
+  text-underline-offset:3px;
+}
+.auth-forgot:hover{color:var(--accent)}
+.auth-reset{margin-top:4px}
+.auth-msg[data-kind="ok"]{color:var(--ok)}
+.auth-msg[data-kind="err"]{color:var(--bad)}

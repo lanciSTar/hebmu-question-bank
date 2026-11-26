@@ -243,6 +243,16 @@ window.__startDrill = function (ARG_BANK) {
       });
     }
     rebuildMeta();
+    // 筛选项存在 localStorage 里，换课程/换数据后可能对不上，清掉无效项
+    if(state.chapters.length){
+      const validCh = new Set((c.chapters || []).map(x => x.name));
+      const kept = state.chapters.filter(n => validCh.has(n));
+      if(kept.length !== state.chapters.length) state.chapters = kept;
+    }
+    if(state.types.length){
+      const kept = state.types.filter(t => GROUPS[t]);
+      if(kept.length !== state.types.length) state.types = kept;
+    }
     return c;
   }
 
@@ -3627,9 +3637,62 @@ window.__startDrill = function (ARG_BANK) {
   function openAuth(){
     $('auth').dataset.open = 'true';
     $('authMsg').textContent = '';
+    $('authReset').hidden = true;
     setTimeout(() => $('authSid').focus(), 60);
   }
   function closeAuth(){ $('auth').dataset.open = 'false'; }
+
+  // 忘记密码：学号 + 验证码（验证码由管理员在 Supabase 表里看）
+  const resetMsg = (text, kind) => {
+    const el = $('resetMsg');
+    if(!el) return;
+    el.textContent = text || '';
+    el.dataset.kind = kind || '';
+  };
+
+  async function requestResetCode(){
+    const sid = ($('resetSid').value || '').trim();
+    if(!sid){ resetMsg('先填学号', 'err'); return; }
+    const btn = $('resetRequest');
+    if(btn){ btn.disabled = true; }
+    resetMsg('提交中…');
+    try{
+      await api('/api/forgot', { method: 'POST', body: JSON.stringify({ studentId: sid }) });
+      resetMsg('验证码已生成，找管理员要（QQ 群 1047914312）', 'ok');
+    }catch(e){
+      resetMsg(authErrText(e), 'err');
+    }finally{
+      if(btn){ btn.disabled = false; }
+    }
+  }
+
+  async function applyResetPassword(){
+    const sid = ($('resetSid').value || '').trim();
+    const code = ($('resetCode').value || '').trim();
+    const pass = $('resetPass').value || '';
+    if(!sid || !code){ resetMsg('学号和验证码都要填', 'err'); return; }
+    if(!/^\d{6}$/.test(code)){ resetMsg('验证码是 6 位数字', 'err'); return; }
+    if(pass.length < 8){ resetMsg('新密码至少 8 位', 'err'); return; }
+    const btn = $('resetApply');
+    if(btn){ btn.disabled = true; }
+    resetMsg('提交中…');
+    try{
+      await api('/api/reset', { method: 'POST', body: JSON.stringify({ studentId: sid, code, password: pass }) });
+      resetMsg('密码已重置，回去登录吧', 'ok');
+      $('resetPass').value = '';
+      setTimeout(() => {
+        $('authReset').hidden = true;
+        $('authSid').value = sid;
+        $('authPass').value = '';
+        $('authMsg').textContent = '密码已重置，用新密码登录';
+        setTimeout(() => $('authPass').focus(), 60);
+      }, 1200);
+    }catch(e){
+      resetMsg(authErrText(e), 'err');
+    }finally{
+      if(btn){ btn.disabled = false; }
+    }
+  }
 
   // 轻量提示条（注册成功、保存成功之类的）
   let toastTimer = 0;
@@ -3875,6 +3938,29 @@ window.__startDrill = function (ARG_BANK) {
       if(e.key === 'Enter'){ e.preventDefault(); doAuth('login'); }
     });
     $('authPass').addEventListener('input', () => { $('authMsg').textContent = ''; });
+
+    // 忘记密码：在同一个弹窗里切换
+    $('authForgot').addEventListener('click', () => {
+      $('authReset').hidden = false;
+      if($('authSid').closest('label')) $('authSid').closest('label').hidden = true;
+      if($('authPass').closest('label')) $('authPass').closest('label').hidden = true;
+      $('authLogin').hidden = true;
+      $('authRegister').hidden = true;
+      $('authMsg').textContent = '';
+      $('resetSid').value = $('authSid').value.trim();
+      setTimeout(() => $('resetSid').focus(), 60);
+    });
+    $('resetBack').addEventListener('click', () => {
+      $('authReset').hidden = true;
+      if($('authSid').closest('label')) $('authSid').closest('label').hidden = false;
+      if($('authPass').closest('label')) $('authPass').closest('label').hidden = false;
+      $('authLogin').hidden = false;
+      $('authRegister').hidden = false;
+      resetMsg('');
+    });
+    $('resetRequest').addEventListener('click', requestResetCode);
+    $('resetApply').addEventListener('click', applyResetPassword);
+    $('resetPass').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); applyResetPassword(); } });
     $('discussForm').addEventListener('submit', (e) => { e.preventDefault(); sendDiscuss($('discussInput').value); });
     $('discussInput').addEventListener('input', syncDiscussHint);
     window.__discussSync = syncDiscussHint;
