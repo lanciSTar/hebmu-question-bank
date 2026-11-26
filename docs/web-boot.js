@@ -54,21 +54,22 @@
       CUSTOM.forEach(function (c) {
         all.push({ id: c.id, name: c.name, n: (c.questions || []).length, custom: true });
       });
-      if (!k) return [];
+      if (!k) return all.slice(0, 40);   // 没输入时也列出来，方便直接点
       return all.filter(function (c) {
         return String(c.name).toLowerCase().indexOf(k) >= 0 || String(c.id).indexOf(k) >= 0;
-      }).slice(0, 30);
+      }).slice(0, 40);
     }
 
-    function render(kw) {
-      var list = items(kw);
-      if (!String(kw || '').trim()) {
+    function render(kw, force) {
+      var k = String(kw || '').trim();
+      if (!k && !force) {
         listEl.hidden = true;
         curEl.hidden = false;
         return;
       }
       curEl.hidden = true;
       listEl.hidden = false;
+      var list = items(k);
       listEl.innerHTML = '';
       if (!list.length) {
         listEl.innerHTML = '<div class="rail-course-empty">没有匹配的题库</div>';
@@ -82,6 +83,7 @@
         b.querySelector('.nm').textContent = c.name + (c.custom ? '（自建）' : '');
         b.querySelector('.nn').textContent = c.n + ' 题';
         if (String(c.id) === String(CUR_ID)) b.setAttribute('aria-current', 'true');
+        b.addEventListener('mousedown', function (e) { e.preventDefault(); }); // 别让输入框先失焦
         b.addEventListener('click', function () {
           search.value = '';
           listEl.hidden = true;
@@ -98,10 +100,18 @@
       });
     }
 
-    search.addEventListener('input', function () { render(search.value); });
-    search.addEventListener('focus', function () { if (search.value.trim()) render(search.value); });
+    // 点一下输入框就把题库列出来
+    search.addEventListener('focus', function () { render(search.value, true); });
+    search.addEventListener('click', function () { render(search.value, true); });
+    search.addEventListener('input', function () { render(search.value, true); });
     search.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { search.value = ''; render(''); }
+      if (e.key === 'Escape') { search.value = ''; render('', false); }
+    });
+    search.addEventListener('blur', function () {
+      // 等点击事件处理完再收
+      setTimeout(function () {
+        if (!listEl.matches(':hover')) { listEl.hidden = true; curEl.hidden = false; }
+      }, 180);
     });
 
     // 记下当前题库 id 供高亮
