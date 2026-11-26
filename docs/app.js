@@ -348,6 +348,10 @@ window.__startDrill = function (ARG_BANK) {
           failMin: state.failMin, maxStreak: state.maxStreak,
           rangeFrom: state.rangeFrom, rangeTo: state.rangeTo
         }));
+        // 网页版登录后可以借这个钩子把进度同步到云端
+        if(typeof window.__onSaveProgress === 'function'){
+          try{ window.__onSaveProgress(); }catch(e){}
+        }
       }catch(e){}
     }, 220);
   }
@@ -3152,15 +3156,17 @@ window.__startDrill = function (ARG_BANK) {
   });
 
   /* ---------- 讨论区（要连服务器） ---------- */
-  const onlineOn = () => !!(window.__ONLINE__ || window.__SERVER__);
-  const ONLINE = !!window.__SERVER__;
+  // 有服务器地址，或者网页版挂了 Supabase 适配层，都算「在线」
+  const onlineOn = () => !!(window.__ONLINE__ || window.__SERVER__ || window.__API_ADAPTER__);
+  const ONLINE = !!(window.__SERVER__ || window.__API_ADAPTER__);
   let ME = null;
 
   const TOKEN_KEY = 'hbmu_token';
   const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } };
   const setToken = (t) => { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) {} };
 
-  const api = async (path, opts = {}) => {
+  // 默认实现：直接打自己的服务器（扩展 / App 用）
+  const defaultApi = async (path, opts = {}) => {
     const token = getToken();
     const r = await fetch((window.__SERVER__ || '') + path, {
       headers: {
@@ -3175,6 +3181,10 @@ window.__startDrill = function (ARG_BANK) {
     if (!r.ok) throw Object.assign(new Error((body && body.error) || '请求失败'), { status: r.status });
     return body;
   };
+
+  // 网页版可以用 window.__API_ADAPTER__ 接管所有 /api/* 请求（比如走 Supabase）
+  const api = (path, opts = {}) =>
+    (typeof window.__API_ADAPTER__ === 'function' ? window.__API_ADAPTER__(path, opts) : defaultApi(path, opts));
 
   function fmtTime(ts){
     const d = new Date(ts);
@@ -3209,7 +3219,9 @@ window.__startDrill = function (ARG_BANK) {
     return !!(state.answers[q.id] || state.ratings[q.id] !== undefined || q.__revealed);
   }
 
-  let discussSort = 'likes';
+  let discussSort = (() => {
+    try { return localStorage.getItem('hbmu_discuss_sort') || 'likes'; } catch(e){ return 'likes'; }
+  })();
   const chosenTags = new Set();
   const folded = new Set();
 
@@ -3459,7 +3471,12 @@ window.__startDrill = function (ARG_BANK) {
       '<div class="dc-rf-acts"><button type="button" class="dc-send">发送</button>' +
       '<button type="button" class="dc-cancel">取消</button></div>';
 
-    item.querySelector('.dc-replies').after(form);
+    const repliesEl = item.querySelector('.dc-replies');
+    if(repliesEl) repliesEl.after(form);
+    else {
+      const acts = item.querySelector('.dc-acts');
+      if(acts) acts.after(form); else item.appendChild(form);
+    }
     const ta = form.querySelector('textarea');
     ta.focus();
     form.querySelector('.dc-cancel').onclick = () => form.remove();
@@ -3475,6 +3492,7 @@ window.__startDrill = function (ARG_BANK) {
             body: text,
             parentId: id,
             replyToId: replyToId || null,
+            replyToNick: replyToNick || '',
           }),
         });
         form.remove();
@@ -3506,6 +3524,7 @@ window.__startDrill = function (ARG_BANK) {
     if(!q) return;
     try{
       const r = await api('/api/mistake', { method: 'POST', body: JSON.stringify({ course: state.courseId, qid: q.id }) });
+      if(r && r.unsupported){ toast('网页版暂时不支持「我也错了」'); return; }
       const btn = $('discussMistake');
       if(btn){
         btn.dataset.on = r.mine ? '1' : '0';
@@ -3519,6 +3538,7 @@ window.__startDrill = function (ARG_BANK) {
     const sortBtn = e.target.closest && e.target.closest('#discussSort button');
     if(sortBtn){
       discussSort = sortBtn.dataset.sort;
+      try { localStorage.setItem('hbmu_discuss_sort', discussSort); } catch(e){}
       loadDiscuss();
       return;
     }
@@ -3611,20 +3631,65 @@ window.__startDrill = function (ARG_BANK) {
   }
   function closeAuth(){ $('auth').dataset.open = 'false'; }
 
+  // 轻量提示条（注册成功、保存成功之类的）
+  let toastTimer = 0;
+  function toast(text){
+    let el = document.getElementById('appToast');
+    if(!el){
+      el = document.createElement('div');
+      el.id = 'appToast';
+      el.className = 'app-toast';
+      document.body.appendChild(el);
+    }
+    el.textContent = text;
+    el.dataset.on = '1';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.dataset.on = '0'; }, 2800);
+  }
+
+  // 把 Supabase / 服务器的英文报错翻成中文
+  function authErrText(e){
+    const msg = String((e && e.message) || '');
+    if(/already registered|already exists|user already/i.test(msg)) return '这个学号已经注册过了，直接点「登录」就行';
+    if(/invalid login credentials|invalid_grant|invalid password/i.test(msg)) return '学号或密码不对';
+    if(/password should be at least|password.*too short/i.test(msg)) return '密码至少 8 位';
+    if(/rate limit|too many requests|over_email_send/i.test(msg)) return '试得太频繁了，等一分钟再试';
+    if(/email not confirmed/i.test(msg)) return '邮箱还没验证，稍等一会儿再试';
+    if(/signups not allowed|signup.*disabled/i.test(msg)) return '这个站点的注册被管理员关掉了';
+    if(/network|failed to fetch|load failed/i.test(msg)) return '网络不通，检查一下网络再试';
+    return msg || '操作失败';
+  }
+
   async function doAuth(kind){
     const sid = $('authSid').value.trim();
     const pass = $('authPass').value;
+    const btn = kind === 'register' ? $('authRegister') : $('authLogin');
     $('authMsg').textContent = '';
-    if(!sid || !pass){ $('authMsg').textContent = '学号和密码都要填'; return; }
+
+    if(!sid){ $('authMsg').textContent = '先填学号'; return; }
+    if(!/^[0-9A-Za-z@._-]{4,40}$/.test(sid)){ $('authMsg').textContent = '学号格式不对（4–40 位数字或字母）'; return; }
+    if(!pass || pass.length < 8){ $('authMsg').textContent = '密码至少 8 位'; return; }
+
+    const oldText = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = kind === 'register' ? '注册中…' : '登录中…'; }
+    $('authMsg').textContent = '';
+
     try{
       const r = await api('/api/' + kind, { method: 'POST', body: JSON.stringify({ studentId: sid, password: pass }) });
-      if (r && r.token) setToken(r.token);
-      ME = { nickname: r.nickname };
-      closeAuth();
+      if(r && r.token) setToken(r.token);
+      ME = { nickname: (r && r.nickname) || '冀医用户', id: r && r.userId };
       $('authPass').value = '';
+      closeAuth();
       await loadDiscuss();
+      if(kind === 'register'){
+        toast('注册成功，你的昵称是 ' + ME.nickname + '（可在「我的账户」里改）');
+      }else{
+        toast('欢迎回来，' + ME.nickname);
+      }
     }catch(e){
-      $('authMsg').textContent = e.message || '操作失败';
+      $('authMsg').textContent = authErrText(e);
+    }finally{
+      if(btn){ btn.disabled = false; btn.textContent = oldText; }
     }
   }
 
@@ -3702,6 +3767,43 @@ window.__startDrill = function (ARG_BANK) {
     }
   });
 
+  // 进度导出 / 导入（换设备用；网页版和扩展都能用）
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if(!t || !t.closest) return;
+    if(t.closest('#accProgToggle')){
+      const f = $('accProgForm');
+      if(f) f.hidden = !f.hidden;
+      return;
+    }
+    if(t.closest('#accProgExport')){
+      const ta = $('accProgJson');
+      const msg = $('accProgMsg');
+      if(!ta) return;
+      try{
+        ta.value = (typeof window.__exportProgress === 'function')
+          ? window.__exportProgress()
+          : (localStorage.getItem(KEY) || '{}');
+        if(msg) msg.textContent = '已导出，复制这段文字就行';
+      }catch(err){ if(msg) msg.textContent = '导出失败'; }
+      return;
+    }
+    if(t.closest('#accProgImport')){
+      const ta = $('accProgJson');
+      const msg = $('accProgMsg');
+      if(!ta || !ta.value.trim()){ if(msg) msg.textContent = '先把进度 JSON 粘进来'; return; }
+      try{
+        const data = JSON.parse(ta.value);
+        if(!data || typeof data !== 'object') throw new Error('不是有效的进度 JSON');
+        if(typeof window.__importProgress === 'function') window.__importProgress(ta.value);
+        else localStorage.setItem(KEY, JSON.stringify(data));
+        if(msg) msg.textContent = '导入成功，正在刷新…';
+        setTimeout(() => location.reload(), 600);
+      }catch(err){ if(msg) msg.textContent = err.message || '导入失败'; }
+      return;
+    }
+  });
+
   const VERIFY_TEXT = { none: '未认证', pending: '待审核', approved: '已认证', rejected: '未通过' };
 
   function renderVerifyState(){
@@ -3765,6 +3867,14 @@ window.__startDrill = function (ARG_BANK) {
     $('auth').addEventListener('click', (e) => { if(e.target.id === 'auth') closeAuth(); });
     $('authLogin').addEventListener('click', () => doAuth('login'));
     $('authRegister').addEventListener('click', () => doAuth('register'));
+    // 回车：学号框跳到密码框，密码框直接登录
+    $('authSid').addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ e.preventDefault(); $('authPass').focus(); }
+    });
+    $('authPass').addEventListener('keydown', (e) => {
+      if(e.key === 'Enter'){ e.preventDefault(); doAuth('login'); }
+    });
+    $('authPass').addEventListener('input', () => { $('authMsg').textContent = ''; });
     $('discussForm').addEventListener('submit', (e) => { e.preventDefault(); sendDiscuss($('discussInput').value); });
     $('discussInput').addEventListener('input', syncDiscussHint);
     window.__discussSync = syncDiscussHint;

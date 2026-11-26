@@ -275,6 +275,9 @@
       return await reportStat(body.course, body.qkey, true);
     }
     if (pathname === '/api/mistake' && method === 'POST') {
+      return { ok: true, unsupported: true };
+    }
+    if (pathname === '/api/reports' && method === 'POST') {
       return { ok: true };
     }
     if (pathname.indexOf('/api/explanation') === 0) {

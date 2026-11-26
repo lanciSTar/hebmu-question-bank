@@ -1150,3 +1150,14 @@ body[data-view="practice"] #dustBg{opacity:.9}
 }
 .setup-range input:focus{border-color:var(--accent)}
 .setup-range-dash{color:var(--ink-3);font-size:12px}
+
+/* 轻量提示条（注册成功之类的） */
+.app-toast{
+  position:fixed;left:50%;bottom:28px;transform:translate(-50%,12px);
+  max-width:min(560px,86vw);padding:10px 16px;border-radius:11px;
+  background:rgba(30,40,36,.94);color:#F6F3EC;font-size:13px;line-height:1.6;
+  box-shadow:0 10px 30px rgba(0,0,0,.22);z-index:200;
+  opacity:0;pointer-events:none;transition:opacity .18s ease,transform .18s ease;
+  white-space:normal;text-align:center;
+}
+.app-toast[data-on="1"]{opacity:1;transform:translate(-50%,0)}
