@@ -97,7 +97,7 @@
     <p class="auth-sub">用学号注册，昵称自动生成，之后可以改。</p>
     <label class="auth-field"><span>学号</span><input id="authSid" inputmode="numeric" autocomplete="username" placeholder="2401xxxxxxxx"></label>
     <label class="auth-field"><span>密码</span><input id="authPass" type="password" autocomplete="current-password" placeholder="至少 8 位"></label>
-    <label class="auth-field"><span>验证码</span>
+    <label class="auth-field" id="authCapField"><span>验证码</span>
       <span class="auth-cap">
         <input id="authCap" autocomplete="off" inputmode="text" placeholder="输入右边的字符">
         <img id="authCapImg" alt="验证码" title="点一下换一张" hidden>
@@ -111,15 +111,10 @@
     <button type="button" class="auth-forgot" id="authForgot">忘记密码？</button>
 
     <div class="auth-reset" id="authReset" hidden>
-      <p class="auth-sub" style="margin:4px 0 10px">输入学号申请验证码，找管理员要验证码后填进来重置。</p>
-      <label class="auth-field"><span>学号</span><input id="resetSid" inputmode="numeric" placeholder="注册时用的学号"></label>
-      <label class="auth-field"><span>验证码</span><input id="resetCode" inputmode="numeric" placeholder="6 位数字"></label>
-      <label class="auth-field"><span>新密码</span><input id="resetPass" type="password" autocomplete="new-password" placeholder="至少 8 位"></label>
-      <div class="auth-acts">
-        <button class="btn btn-ghost" id="resetRequest">申请验证码</button>
-        <button class="btn btn-primary" id="resetApply">重置密码</button>
-      </div>
-      <p class="auth-msg" id="resetMsg"></p>
+      <p class="auth-sub" style="margin:4px 0 14px;line-height:1.8">
+        账号密码由学校题库的账号系统管理。<br>
+        忘记密码的话，加 QQ 群 <b>1047914312</b> 找管理员重置。
+      </p>
       <button type="button" class="auth-forgot" id="resetBack">← 回到登录</button>
     </div>
   </div>
