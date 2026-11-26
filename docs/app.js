@@ -3290,7 +3290,8 @@ window.__startDrill = function (ARG_BANK) {
       // 我也错了
       const mBtn = $('discussMistake');
       if(mBtn){
-        mBtn.hidden = !ME;
+        // 网页版没有「我也错了」的存储，直接隐藏，避免点了不能用的按钮
+        mBtn.hidden = !ME || typeof window.__API_ADAPTER__ === 'function';
         mBtn.dataset.on = r.myMistake ? '1' : '0';
         mBtn.querySelector('b').textContent = r.mistakeCount || 0;
       }

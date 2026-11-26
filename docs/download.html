@@ -5,76 +5,124 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>题库下载 · 河北医科大学题库刷题</title>
 <link rel="stylesheet" href="app.css">
-<link rel="stylesheet" href="web.css">
 <style>
-  body{background:var(--paper);color:var(--ink);font-family:var(--sans);margin:0;padding:28px 18px 60px}
-  .dl-wrap{max-width:820px;margin:0 auto}
-  .dl-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
-  .dl-head h1{font-size:22px;margin:0;letter-spacing:.02em}
-  .dl-head a{color:var(--accent);text-decoration:none;font-size:13px}
-  .dl-sub{color:var(--ink-3);font-size:13px;line-height:1.8;margin:0 0 20px}
-  .dl-tip{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--paper-2);
-    font-size:13px;line-height:1.9;color:var(--ink-2);margin:0 0 20px}
+  body{background:var(--paper);color:var(--ink);font-family:var(--sans);margin:0;padding:0 0 60px}
+  .dl-wrap{max-width:860px;margin:0 auto;padding:0 18px}
+  .dl-top{
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    padding:22px 0 16px;border-bottom:1px solid var(--line);
+  }
+  .dl-top h1{font-size:21px;margin:0;letter-spacing:.02em}
+  .dl-top .sub{font-size:12.5px;color:var(--ink-3)}
+  .dl-top .back{
+    margin-left:auto;font-size:12.5px;color:var(--accent);text-decoration:none;
+    border:1px solid var(--line-2);border-radius:8px;padding:6px 11px;background:var(--paper);
+  }
+  .dl-top .back:hover{border-color:var(--accent)}
+  .dl-tip{
+    margin:16px 0;padding:11px 14px;border:1px solid var(--line);border-radius:10px;
+    background:var(--paper-2);font-size:12.5px;line-height:1.9;color:var(--ink-2);
+  }
   .dl-tip b{color:var(--ink)}
+  .dl-tip code{font-size:11.5px;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+  .dl-tools{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+  .dl-search{
+    flex:1;min-width:200px;height:38px;padding:0 12px;border-radius:9px;
+    border:1px solid var(--line-2);background:var(--paper);color:var(--ink);
+    font:inherit;font-size:13.5px;outline:none;
+  }
+  .dl-search:focus{border-color:var(--accent)}
+  .dl-count{font-size:12px;color:var(--ink-3);white-space:nowrap}
   table{width:100%;border-collapse:collapse;font-size:13.5px}
   th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
-  th{color:var(--ink-3);font-weight:500;font-size:12px;letter-spacing:.04em}
+  th{color:var(--ink-3);font-weight:500;font-size:11.5px;letter-spacing:.06em}
+  tbody tr:hover{background:var(--paper-2)}
   td.num{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
-  td a{color:var(--accent);text-decoration:none}
-  td a:hover{text-decoration:underline}
-  .dl-empty{color:var(--ink-3);font-size:13px;padding:20px 0}
+  .dl-btn{
+    display:inline-block;padding:4px 12px;border-radius:7px;
+    border:1px solid var(--line-2);background:var(--paper);color:var(--accent);
+    font-size:12px;text-decoration:none;white-space:nowrap;
+  }
+  .dl-btn:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .dl-empty{color:var(--ink-3);font-size:13px;padding:24px 0;text-align:center}
 </style>
 </head>
 <body>
 <div class="dl-wrap">
-  <div class="dl-head">
+  <header class="dl-top">
     <h1>题库下载</h1>
-    <a href="./">← 回到刷题</a>
-  </div>
-  <p class="dl-sub">这里是网页版正在用的题库文件，按课程拆分。可以直接下载 JSON 自己留存，或者导入到插件 / App 里。</p>
+    <span class="sub" id="dlStat">加载中…</span>
+    <a class="back" href="./">← 回到刷题</a>
+  </header>
 
   <div class="dl-tip">
-    <b>怎么用：</b><br>
-    · 想直接刷题 → <a href="./">回到首页</a>，右上角切换题库即可，不用下载。<br>
-    · 想离线保存 → 下载对应 JSON（格式是 <code>hebmu-bank-v1</code> 或网页版课程结构）。<br>
-    · 想导入插件 → 在题库缓存里用「导入」把 JSON 粘进去。
+    <b>怎么用：</b>想直接刷题就 <a href="./">回到首页</a>，左侧栏切换题库，不用下载。<br>
+    想离线保存就下载对应 JSON；想导入插件就在题库缓存里用「导入」把 JSON 粘进去。
+  </div>
+
+  <div class="dl-tools">
+    <input class="dl-search" id="dlSearch" type="search" placeholder="搜索课程名或编号" autocomplete="off">
+    <span class="dl-count" id="dlCount"></span>
   </div>
 
   <table>
-    <thead><tr><th>题库</th><th class="num">题数</th><th class="num">大小</th><th class="num">下载</th></tr></thead>
+    <thead><tr><th>题库</th><th class="num">题数</th><th class="num">大小</th><th class="num">文件</th></tr></thead>
     <tbody id="dlBody"><tr><td colspan="4" class="dl-empty">加载中…</td></tr></tbody>
   </table>
 </div>
 
 <script>
-(async function(){
-  const body = document.getElementById('dlBody');
-  try{
-    const res = await fetch('data/index.json', { cache: 'no-store' });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    const list = await res.json();
-    if(!list.length){ body.innerHTML = '<tr><td colspan="4" class="dl-empty">还没有题库文件</td></tr>'; return; }
-    body.innerHTML = '';
-    for(const c of list){
-      const tr = document.createElement('tr');
-      const name = document.createElement('td');
-      const n = document.createElement('td'); n.className = 'num';
-      const size = document.createElement('td'); size.className = 'num';
-      const dl = document.createElement('td'); dl.className = 'num';
-      name.textContent = c.name;
-      n.textContent = c.count + ' 题';
-      size.textContent = Math.max(1, Math.round(c.size / 1024)) + ' KB';
-      const a = document.createElement('a');
-      a.href = 'data/' + encodeURIComponent(c.id) + '.json';
-      a.textContent = '下载';
-      a.setAttribute('download', c.name + '.json');
-      dl.appendChild(a);
-      tr.append(name, n, size, dl);
-      body.appendChild(tr);
-    }
-  }catch(e){
-    body.innerHTML = '<tr><td colspan="4" class="dl-empty">加载失败：' + (e.message || e) + '</td></tr>';
+(function(){
+  var body = document.getElementById('dlBody');
+  var stat = document.getElementById('dlStat');
+  var countEl = document.getElementById('dlCount');
+  var searchEl = document.getElementById('dlSearch');
+  var ALL = [];
+
+  function humanSize(n){
+    if (n >= 1024 * 1024) return (n / 1024 / 1024).toFixed(1) + ' MB';
+    return Math.max(1, Math.round(n / 1024)) + ' KB';
   }
+
+  function render(kw){
+    var k = String(kw || '').trim().toLowerCase();
+    var list = ALL.filter(function(c){
+      if (!k) return true;
+      return String(c.name).toLowerCase().indexOf(k) >= 0 || String(c.id).indexOf(k) >= 0;
+    });
+    countEl.textContent = list.length + ' / ' + ALL.length + ' 门';
+    if (!list.length){
+      body.innerHTML = '<tr><td colspan="4" class="dl-empty">没有匹配的题库</td></tr>';
+      return;
+    }
+    var html = '';
+    for (var i = 0; i < list.length; i++){
+      var c = list[i];
+      html += '<tr>' +
+        '<td>' + c.name + '</td>' +
+        '<td class="num">' + c.count + ' 题</td>' +
+        '<td class="num">' + humanSize(c.size) + '</td>' +
+        '<td class="num"><a class="dl-btn" href="data/' + encodeURIComponent(c.id) + '.json" download="' + c.name + '.json">下载</a></td>' +
+      '</tr>';
+    }
+    body.innerHTML = html;
+  }
+
+  fetch('data/index.json', { cache: 'no-store' })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(list){
+      ALL = list;
+      var totalQ = 0, totalSize = 0;
+      for (var i = 0; i < list.length; i++){ totalQ += list[i].count; totalSize += list[i].size; }
+      stat.textContent = '共 ' + list.length + ' 门 · ' + totalQ.toLocaleString() + ' 题 · ' + (totalSize / 1024 / 1024).toFixed(1) + ' MB';
+      body.innerHTML = '';
+      render('');
+      searchEl.addEventListener('input', function(){ render(searchEl.value); });
+    })
+    .catch(function(e){
+      stat.textContent = '加载失败';
+      body.innerHTML = '<tr><td colspan="4" class="dl-empty">题库清单加载失败：' + (e.message || e) + '</td></tr>';
+    });
 })();
 </script>
 </body>
