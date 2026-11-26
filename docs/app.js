@@ -3840,6 +3840,8 @@ window.__startDrill = function (ARG_BANK) {
       ME = { nickname: (r && r.nickname) || '冀医用户', id: r && r.userId };
       $('authPass').value = '';
       closeAuth();
+      // 再拉一次 /api/me，把云服务器的认证状态（verify）补上
+      try { await loadMe(); } catch(e) {}
       await loadDiscuss();
       if(kind === 'register'){
         toast('注册成功，你的昵称是 ' + ME.nickname + '（可在「我的账户」里改）');
