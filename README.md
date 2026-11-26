@@ -1,5 +1,8 @@
 # 河北医科大学题库刷题
 
+**在线刷题：** https://lancistar.github.io/hebmu-question-bank/
+**仓库地址：** https://github.com/lanciSTar/hebmu-question-bank
+
 在线刷题 + 题库下载，纯静态页面，不依赖自建服务器。
 
 - **在线刷题**：打开 Pages 首页，右下角切换题库
