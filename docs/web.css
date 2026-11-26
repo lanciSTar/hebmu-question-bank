@@ -1,23 +1,28 @@
-/* 网页版：左侧栏顶部的题库选择（与 rail 里其他控件同一套样式） */
-.rail-pick{
-  display:flex;flex-direction:column;gap:8px;
-  padding:14px 8px 12px;border-bottom:1px solid var(--line);
+/* 网页版：题库选择并进「搜索题库」那一行 */
+.rail-search{
+  display:flex;align-items:center;gap:6px;
+  padding:0 8px 10px;
 }
-.rail-pick-label{
-  font-size:12px;color:var(--ink-3);letter-spacing:.06em;padding:0 2px;
-}
-.rail-pick select{
-  width:100%;height:34px;box-sizing:border-box;
-  padding:0 10px;border-radius:8px;
+.rail-search select{
+  flex:0 0 42%;width:42%;height:34px;box-sizing:border-box;
+  padding:0 6px;border-radius:8px;
   border:1px solid var(--line-2);background:var(--paper);color:var(--ink);
-  font:inherit;font-size:12.5px;outline:none;cursor:pointer;
+  font:inherit;font-size:12px;outline:none;cursor:pointer;
 }
-.rail-pick select:focus{border-color:var(--accent)}
-.rail-pick-link{
-  display:flex;align-items:center;justify-content:center;gap:6px;
-  width:100%;box-sizing:border-box;margin-top:2px;
-  padding:8px 10px;border:1px dashed rgba(42,90,76,.35);border-radius:8px;
-  background:rgba(42,90,76,.04);color:var(--accent,#2A5A4C);
-  font-size:12.5px;text-decoration:none;
+.rail-search select:focus{border-color:var(--accent)}
+.rail-search input{
+  flex:1 1 auto;min-width:0;width:auto;
 }
-.rail-pick-link:hover{background:rgba(42,90,76,.09)}
+
+/* 侧栏底部的题库下载（和 rail-foot 其他按钮同一套观感） */
+.rail-dl{
+  position:relative;display:block;width:100%;box-sizing:border-box;
+  height:46px;line-height:44px;text-align:center;text-decoration:none;
+  font-size:14.5px;letter-spacing:.02em;color:var(--ink-2);
+  border:1px solid var(--line-2);border-radius:9px;background:var(--paper);
+}
+.rail-dl::after{
+  content:"";position:absolute;left:-1px;right:-1px;bottom:-1px;height:4px;
+  background:var(--accent);opacity:.8;border-radius:0 0 9px 9px;
+}
+.rail-dl:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
