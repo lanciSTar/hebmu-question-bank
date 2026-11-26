@@ -1,0 +1,10 @@
+_android_sdk/
+_tools/gradle-8.2/
+_testdeps/
+_banks/
+_build/
+_login/
+_ext_backup_*/
+_ziptest_ext/
+*.log
+node_modules/
